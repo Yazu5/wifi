@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Wi-Fi Settings</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        body { background-color: #000; color: #fff; overflow: hidden; height: 100dvh; }
+
+        /* Header Area */
+        .top-nav { padding: 20px 20px 10px; display: flex; align-items: center; gap: 20px; }
+        .back-arrow { font-size: 24px; cursor: pointer; }
+        h1 { font-size: 28px; font-weight: 400; }
+
+        .wifi-toggle {
+            margin: 20px 16px; padding: 20px; background: #000;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .switch { width: 45px; height: 24px; background: #007aff; border-radius: 20px; position: relative; }
+        .switch::after { content: ''; position: absolute; right: 2px; top: 2px; width: 20px; height: 20px; background: #fff; border-radius: 50%; }
+
+        /* Network List */
+        .section-title { padding: 10px 20px; font-size: 12px; color: #8e8e93; letter-spacing: 1px; text-transform: uppercase; }
+
+        .network-item { padding: 16px 20px; display: flex; align-items: center; gap: 15px; cursor: pointer; }
+        .network-info { flex: 1; }
+        .network-name { font-size: 17px; margin-bottom: 2px; }
+        .network-hint { font-size: 11px; color: #444; } /* Small, faded hint */
+        
+        .icon-wifi { font-size: 18px; }
+        .icon-lock { font-size: 14px; opacity: 0.4; margin-right: 10px; }
+        .icon-arrow { font-size: 18px; opacity: 0.4; border: 1px solid #333; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+
+        /* Connected State (Blue Box) */
+        .connected-box {
+            margin: 0 16px 20px; padding: 25px 20px;
+            background: #0056b3; border-radius: 24px;
+            display: none; align-items: center; gap: 15px;
+        }
+
+        /* Bottom Sheet Password Prompt */
+        #password-sheet {
+            position: fixed; bottom: -100%; left: 0; width: 100%;
+            background: #1c1c1e; border-radius: 30px 30px 0 0;
+            padding: 30px 20px 450px; /* Large bottom padding for keyboard simulation */
+            transition: bottom 0.4s cubic-bezier(0, 0, 0.2, 1);
+            z-index: 1000; text-align: center;
+        }
+        #password-sheet.open { bottom: 0; }
+        
+        .sheet-title { font-size: 20px; margin-bottom: 25px; }
+        .input-wrapper {
+            background: #2c2c2e; border: 2px solid #007aff;
+            border-radius: 15px; padding: 12px 15px;
+            display: flex; align-items: center; margin-bottom: 20px;
+        }
+        input { background: none; border: none; color: #fff; flex: 1; outline: none; font-size: 16px; }
+
+        .btn-row { display: flex; gap: 12px; }
+        .btn { flex: 1; padding: 15px; border-radius: 15px; font-weight: 600; cursor: pointer; border: none; font-size: 15px; }
+        .btn-cancel { background: #333; color: #fff; }
+        .btn-connect { background: #263859; color: #5a73a3; } /* Disabled look */
+        .btn-connect.active { background: #007aff; color: #fff; }
+
+        /* Notification */
+        #notif {
+            position: fixed; top: -100px; left: 10px; right: 10px;
+            background: rgba(30,30,30,0.9); backdrop-filter: blur(10px);
+            border-radius: 20px; padding: 15px; display: flex; gap: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2000; cursor: pointer;
+        }
+        .notif-img { width: 45px; height: 45px; border-radius: 50%; background: url('adrian.jpg') center/cover; }
+    </style>
+</head>
+<body>
+
+    <div class="top-nav">
+        <span class="back-arrow">←</span>
+        <h1>Wi-Fi</h1>
+    </div>
+
+    <div class="wifi-toggle">
+        <span>Wi-Fi</span>
+        <div class="switch"></div>
+    </div>
+
+    <div class="connected-box" id="active-wifi">
+        <div class="icon-wifi">📶</div>
+        <div class="network-info">
+            <div class="network-name">PLDT</div>
+            <div id="connection-status" style="font-size: 13px; opacity: 0.8;">Connected</div>
+        </div>
+        <span class="icon-arrow">›</span>
+    </div>
+
+    <div id="list-container">
+        <div class="section-title">Available networks</div>
+        <div class="network-item" onclick="openPrompt()">
+            <div class="icon-wifi">📶</div>
+            <div class="network-info">
+                <div class="network-name">PLDT</div>
+                <div class="network-hint">adriansuarez</div>
+            </div>
+            <span class="icon-lock">🔒</span>
+            <span class="icon-arrow">›</span>
+        </div>
+        
+        <div class="network-item" style="opacity: 0.5;">
+            <div class="icon-wifi">📶</div>
+            <div class="network-info"><div class="network-name">Bert-5G</div></div>
+            <span class="icon-lock">🔒</span>
+            <span class="icon-arrow">›</span>
+        </div>
+    </div>
+
+    <div id="password-sheet">
+        <div class="sheet-title">PLDT</div>
+        <div class="input-wrapper">
+            <input type="password" id="passInput" placeholder="Password" oninput="checkPass()">
+            <span>👁️</span>
+        </div>
+        <div class="btn-row">
+            <div class="btn btn-cancel" onclick="closePrompt()">Advanced options</div>
+            <button class="btn btn-connect" id="connBtn" onclick="startConnect()" disabled>Connect</button>
+        </div>
+    </div>
+
+    <div id="notif" onclick="goToChat()">
+        <div class="notif-img"></div>
+        <div style="flex:1">
+            <div style="display:flex; justify-content:space-between">
+                <b style="font-size: 14px;">Adrian</b>
+                <span style="font-size: 11px; opacity: 0.6;">now</span>
+            </div>
+            <p style="font-size: 14px; margin-top: 2px;">Connected successfully. Tap to enter the secure line...</p>
+        </div>
+    </div>
+
+    <script>
+        const sheet = document.getElementById('password-sheet');
+        const passInput = document.getElementById('passInput');
+        const connBtn = document.getElementById('connBtn');
+        const activeBox = document.getElementById('active-wifi');
+        const listContainer = document.getElementById('list-container');
+        const statusMsg = document.getElementById('connection-status');
+
+        function openPrompt() { sheet.classList.add('open'); passInput.focus(); }
+        function closePrompt() { sheet.classList.remove('open'); }
+
+        function checkPass() {
+            if(passInput.value === "adriansuarez") {
+                connBtn.disabled = false;
+                connBtn.classList.add('active');
+            } else {
+                connBtn.disabled = true;
+                connBtn.classList.remove('active');
+            }
+        }
+
+        function startConnect() {
+            closePrompt();
+            listContainer.style.display = 'none';
+            activeBox.style.display = 'flex';
+            
+            // Sequence of status updates
+            const steps = ["Authenticating...", "Obtaining IP address...", "Checking quality...", "Connected"];
+            let i = 0;
+            
+            const interval = setInterval(() => {
+                statusMsg.innerText = steps[i];
+                i++;
+                if(i >= steps.length) {
+                    clearInterval(interval);
+                    showNotification();
+                }
+            }, 1800);
+        }
+
+        function showNotification() {
+            setTimeout(() => {
+                document.getElementById('notif').style.top = '15px';
+                // Subtle haptic pulse if available
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            }, 1000);
+        }
+
+        function goToChat() {
+            window.location.href = "https://yazu5.github.io/opchat/";
+        }
+    </script>
+</body>
+  </html>
+  
